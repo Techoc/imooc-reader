@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       https://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/mvc
+       http://www.springframework.org/schema/mvc/spring-mvc.xsd
+       http://www.springframework.org/schema/tx
+       http://www.springframework.org/schema/tx/spring-tx.xsd
+       ">
+    <!--3.开启SpringMVC注解模式-->
+    <context:component-scan base-package="cn.techoc.reader"/>
+    <!--开启注解扫描驱动-->
+    <mvc:annotation-driven>
+        <mvc:message-converters>
+            <!--解决响应中文乱码问题-->
+            <bean class="org.springframework.http.converter.StringHttpMessageConverter">
+                <property name="supportedMediaTypes">
+                    <list>
+                        <value>text/plain;charset=UTF-8</value>
+                        <value>text/html;charset=UTF-8</value>
+                        <value>text/xml;charset=UTF-8</value>
+                        <value>application/json;charset=UTF-8</value>
+                    </list>
+                </property>
+            </bean>
+        </mvc:message-converters>
+    </mvc:annotation-driven>
+    <!--排除静态资源-->
+    <mvc:default-servlet-handler/>
+
+    <!--5.配置freemarker模板引擎-->
+    <bean id="freemarker" class="org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer">
+        <property name="templateLoaderPath" value="/WEB-INF/templates/"/>
+        <property name="freemarkerSettings">
+            <props>
+                <prop key="defaultEncoding">UTF-8</prop>
+            </props>
+        </property>
+    </bean>
+
+    <bean id="viewResolver" class="org.springframework.web.servlet.view.freemarker.FreeMarkerViewResolver">
+        <property name="contentType" value="text/html;charset=UTF-8"/>
+        <property name="suffix" value=".ftl"/>
+    </bean>
+
+    <!--MyBatis和Spring整合配置-->
+    <!--2.配置数据源-->
+    <bean id="dateSource" class="com.alibaba.druid.pool.DruidDataSource">
+        <property name="driverClassName" value="com.mysql.cj.jdbc.Driver"/>
+        <property name="url"
+                  value="jdbc:mysql://localhost:3306/imooc_reader?useSSL=false&amp;useUnicode=true&amp;characterEncoding=utf8&amp;serverTimezone=Asia/Shanghai"/>
+        <property name="username" value="root"/>
+        <property name="password" value="root"/>
+        <property name="initialSize" value="5"/>
+        <property name="maxActive" value="20"/>
+    </bean>
+
+    <!--原生MyBatis与Spring整合
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+    -->
+    <bean id="sqlSessionFactory" class="com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean">
+        <property name="dataSource" ref="dateSource"/>
+        <property name="mapperLocations" value="classpath:mybatis/mapper/*.xml"/>
+        <!--5.MyBatis配置文件地址-->
+        <property name="configLocation" value="classpath:mybatis/mybatis-config.xml"/>
+        <!-- 配置 MyBatisPlus 分页插件 -->
+        <property name="plugins">
+            <array>
+                <ref bean="mybatisPlusInterceptor"/>
+            </array>
+        </property>
+    </bean>
+
+    <!--4.配置Mapper扫描器-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="cn.techoc.reader.mapper"/>
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+    </bean>
+
+
+    <!-- 配置MyBatisPlus分页插件 -->
+    <bean id="mybatisPlusInterceptor" class="com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor">
+        <property name="interceptors">
+            <list>
+                <ref bean="paginationInnerInterceptor"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="paginationInnerInterceptor"
+          class="com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor">
+        <!-- 指定数据库为MySQL -->
+        <constructor-arg name="dbType" value="MYSQL"/>
+    </bean>
+
+
+    <!--声明式事务配置-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dateSource"/>
+    </bean>
+    <!--注解事务管理器-->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+</beans>
